@@ -9,6 +9,7 @@ LANGUAGE_OPTIONS.forEach(({ code, label, flag }) => {
   btn.addEventListener('click', () => {
     setLanguage(code)
     updateOffset()
+    renderAppointments()
   })
   langList.appendChild(btn)
 })
@@ -175,3 +176,261 @@ function tick() {
 }
 
 tick()
+
+// ─── Preferred timezone (Settings) ───────────────────────────────────────────
+
+const prefTzSelect = document.getElementById('preferred-tz-select')
+populateSelect(prefTzSelect)
+prefTzSelect.value = localStorage.getItem('preferredTz') || localTz || 'UTC'
+
+prefTzSelect.addEventListener('change', () => {
+  localStorage.setItem('preferredTz', prefTzSelect.value)
+  renderAppointments()
+})
+
+function getPreferredTz() {
+  return localStorage.getItem('preferredTz') || localTz || 'UTC'
+}
+
+// ─── Appointments – core helpers ──────────────────────────────────────────────
+
+function loadAppointments() {
+  try { return JSON.parse(localStorage.getItem('appointments') || '[]') }
+  catch { return [] }
+}
+
+function saveAppointments(list) {
+  localStorage.setItem('appointments', JSON.stringify(list))
+}
+
+function getOffsetAtDate(date, tz) {
+  const utcStr = date.toLocaleString('sv-SE', { timeZone: 'UTC' })
+  const tzStr  = date.toLocaleString('sv-SE', { timeZone: tz })
+  return (new Date(tzStr) - new Date(utcStr)) / 3_600_000
+}
+
+// Convert "HH:MM on YYYY-MM-DD in <tz>" to an absolute UTC Date
+function apptLocalToUTC(dateStr, timeStr, tz) {
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  const [h, mi]    = timeStr.split(':').map(Number)
+  const approxUTC  = new Date(Date.UTC(y, mo - 1, d, h, mi))
+  const offset     = getOffsetAtDate(approxUTC, tz)
+  return new Date(approxUTC.getTime() - offset * 3_600_000)
+}
+
+function formatTimeInTZ(utcDate, tz) {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(utcDate)
+}
+
+function formatDateLocalized(dateStr) {
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  return new Intl.DateTimeFormat(getDateLocale(), {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(Date.UTC(y, mo - 1, d)))
+}
+
+function getDayName(dow) {
+  // Jan 7 2024 is a Sunday → dow 0 = Jan 7, dow 1 = Jan 8, …
+  return new Intl.DateTimeFormat(getDateLocale(), { weekday: 'long' })
+    .format(new Date(2024, 0, 7 + dow))
+}
+
+function nextDateForDow(dow) {
+  const today    = new Date()
+  const daysAhead = (dow - today.getDay() + 7) % 7
+  const next     = new Date(today)
+  next.setDate(today.getDate() + daysAhead)
+  const y  = next.getFullYear()
+  const mo = String(next.getMonth() + 1).padStart(2, '0')
+  const dd = String(next.getDate()).padStart(2, '0')
+  return `${y}-${mo}-${dd}`
+}
+
+function getNextOccurrenceMs(appt) {
+  if (appt.type === 'once') {
+    return apptLocalToUTC(appt.date, appt.time, appt.organizerTz).getTime()
+  }
+  return apptLocalToUTC(nextDateForDow(appt.dayOfWeek), appt.time, appt.organizerTz).getTime()
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+// ─── Appointments – render ────────────────────────────────────────────────────
+
+function renderAppointments() {
+  const appts  = loadAppointments()
+  const list   = document.getElementById('appt-list')
+  const empty  = document.getElementById('appt-empty')
+  const prefTz = getPreferredTz()
+
+  list.innerHTML = ''
+
+  if (appts.length === 0) {
+    empty.style.display = 'block'
+    return
+  }
+  empty.style.display = 'none'
+
+  const now    = Date.now()
+  const sorted = [...appts].sort((a, b) => getNextOccurrenceMs(a) - getNextOccurrenceMs(b))
+
+  sorted.forEach(appt => {
+    const card = document.createElement('div')
+    card.className = 'appt-card'
+
+    const refDate   = appt.type === 'once' ? appt.date : nextDateForDow(appt.dayOfWeek)
+    const utcMoment = apptLocalToUTC(refDate, appt.time, appt.organizerTz)
+    const userTime  = formatTimeInTZ(utcMoment, prefTz)
+    const isPast    = appt.type === 'once' && utcMoment.getTime() < now
+
+    if (isPast) card.classList.add('appt-card--past')
+
+    const recurrenceLabel = appt.type === 'weekly'
+      ? `${t('appt_every')} ${getDayName(appt.dayOfWeek)}`
+      : formatDateLocalized(appt.date)
+
+    const orgTzLabel  = appt.organizerTz.split('/').pop().replace(/_/g, ' ')
+    const userTzLabel = prefTz.split('/').pop().replace(/_/g, ' ')
+
+    card.innerHTML = `
+      <div class="appt-card-header">
+        <span class="appt-card-title">${escapeHtml(appt.title)}</span>
+        <button class="appt-delete-btn" data-id="${appt.id}" title="${escapeHtml(t('appt_delete'))}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
+      </div>
+      <div class="appt-card-recurrence">${recurrenceLabel}</div>
+      <div class="appt-card-times">
+        <span class="appt-time-org">${escapeHtml(appt.time)}</span>
+        <span class="appt-tz-name">${escapeHtml(orgTzLabel)}</span>
+        <span class="appt-arrow">→</span>
+        <span class="appt-time-user">${userTime}</span>
+        <span class="appt-tz-name">${escapeHtml(userTzLabel)}</span>
+      </div>
+    `
+
+    card.querySelector('.appt-delete-btn').addEventListener('click', () => {
+      saveAppointments(loadAppointments().filter(a => a.id !== appt.id))
+      renderAppointments()
+    })
+
+    list.appendChild(card)
+  })
+}
+
+// ─── Appointments – modal ─────────────────────────────────────────────────────
+
+const modal      = document.getElementById('appt-modal')
+const addBtn     = document.getElementById('appt-add-btn')
+const closeBtn   = document.getElementById('appt-modal-close')
+const cancelBtn  = document.getElementById('appt-cancel-btn')
+const saveBtn    = document.getElementById('appt-save-btn')
+const titleInput = document.getElementById('appt-form-title')
+const timeInput  = document.getElementById('appt-form-time')
+const orgTzSel   = document.getElementById('appt-form-org-tz')
+const typeToggle = document.getElementById('appt-type-toggle')
+const dateGroup  = document.getElementById('appt-date-group')
+const dowGroup   = document.getElementById('appt-dow-group')
+const dateInput  = document.getElementById('appt-form-date')
+const dowContainer = document.getElementById('appt-form-dow')
+
+populateSelect(orgTzSel)
+orgTzSel.value = localTz || 'Europe/Rome'
+
+// Build day-of-week buttons (Mon first, abbreviated English)
+const DOW_ABBR  = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]
+let selectedDow = 5 // Friday default
+
+DOW_ORDER.forEach(dow => {
+  const btn = document.createElement('button')
+  btn.type = 'button'
+  btn.className = 'dow-btn' + (dow === selectedDow ? ' active' : '')
+  btn.dataset.dow = dow
+  btn.textContent = DOW_ABBR[dow]
+  btn.addEventListener('click', () => {
+    selectedDow = dow
+    dowContainer.querySelectorAll('.dow-btn').forEach(b =>
+      b.classList.toggle('active', parseInt(b.dataset.dow) === dow)
+    )
+  })
+  dowContainer.appendChild(btn)
+})
+
+let apptType = 'once'
+
+typeToggle.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    apptType = btn.dataset.type
+    typeToggle.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b === btn))
+    dateGroup.style.display = apptType === 'once' ? '' : 'none'
+    dowGroup.style.display  = apptType === 'weekly' ? '' : 'none'
+  })
+})
+
+function todayDateString() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+function openModal() {
+  apptType = 'once'
+  typeToggle.querySelectorAll('.type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === 'once')
+  )
+  titleInput.value = ''
+  timeInput.value  = '18:30'
+  orgTzSel.value   = localTz || 'Europe/Rome'
+  dateInput.value  = todayDateString()
+  dateGroup.style.display = ''
+  dowGroup.style.display  = 'none'
+  modal.classList.add('open')
+  titleInput.focus()
+}
+
+function closeModal() {
+  modal.classList.remove('open')
+}
+
+addBtn.addEventListener('click', openModal)
+closeBtn.addEventListener('click', closeModal)
+cancelBtn.addEventListener('click', closeModal)
+modal.addEventListener('click', e => { if (e.target === modal) closeModal() })
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal() })
+
+saveBtn.addEventListener('click', () => {
+  const title = titleInput.value.trim()
+  if (!title) { titleInput.focus(); return }
+  if (apptType === 'once' && !dateInput.value) { dateInput.focus(); return }
+
+  const appt = {
+    id:          Date.now().toString(),
+    title,
+    time:        timeInput.value || '00:00',
+    organizerTz: orgTzSel.value,
+    type:        apptType,
+  }
+
+  if (apptType === 'once') {
+    appt.date = dateInput.value
+  } else {
+    appt.dayOfWeek = selectedDow
+  }
+
+  const appts = loadAppointments()
+  appts.push(appt)
+  saveAppointments(appts)
+  closeModal()
+  renderAppointments()
+})
+
+renderAppointments()
