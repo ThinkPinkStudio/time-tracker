@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,14 +25,21 @@
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12,6 12,12 16,14"/>
           </svg>
-          Convertitore
+          <span data-i18n="nav_converter">Converter</span>
         </a>
         <a class="nav-item" data-page="contacts">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
           </svg>
-          Contatti
+          <span data-i18n="nav_contacts">Contacts</span>
+        </a>
+        <a class="nav-item" data-page="settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span data-i18n="nav_settings">Settings</span>
         </a>
       </nav>
       <div class="sidebar-footer">ThinkPink Studio</div>
@@ -44,15 +51,15 @@
       <!-- Converter Page -->
       <div id="page-converter" class="page active">
         <div class="page-header">
-          <h1>Fusi Orari</h1>
-          <p class="page-subtitle">Sviluppato da ThinkPink Studio</p>
+          <h1 data-i18n="page_title_converter">Time Zones</h1>
+          <p class="page-subtitle" data-i18n="page_subtitle">Developed by ThinkPink Studio</p>
         </div>
 
         <div class="clocks-wrapper">
           <!-- FROM clock -->
           <div class="clock-panel">
             <div class="tz-selector-wrapper">
-              <label>Da</label>
+              <label data-i18n="label_from">From</label>
               <select id="tz-from" class="tz-select"></select>
             </div>
             <div class="clock-container">
@@ -105,7 +112,7 @@
           <!-- TO clock -->
           <div class="clock-panel">
             <div class="tz-selector-wrapper">
-              <label>A</label>
+              <label data-i18n="label_to">To</label>
               <select id="tz-to" class="tz-select"></select>
             </div>
             <div class="clock-container">
@@ -144,15 +151,15 @@
         </div>
 
         <div class="offset-badge">
-          Differenza: <span id="offset-text">--</span>
+          <span data-i18n="offset_label">Difference</span>: <span id="offset-text">--</span>
         </div>
       </div>
 
       <!-- Contacts Page -->
       <div id="page-contacts" class="page">
         <div class="page-header">
-          <h1>Contatti</h1>
-          <p class="page-subtitle">Sviluppato da ThinkPink Studio</p>
+          <h1 data-i18n="page_title_contacts">Contacts</h1>
+          <p class="page-subtitle" data-i18n="page_subtitle">Developed by ThinkPink Studio</p>
         </div>
 
         <div class="contact-card">
@@ -160,7 +167,7 @@
             <img src="../assets/logo.svg" alt="ThinkPink Studio" class="contact-logo">
             <div>
               <h2>ThinkPink Studio</h2>
-              <p>Soluzioni digitali su misura</p>
+              <p data-i18n="contact_tagline">Custom digital solutions</p>
             </div>
           </div>
 
@@ -207,8 +214,32 @@
         </div>
       </div>
 
+      <!-- Settings Page -->
+      <div id="page-settings" class="page">
+        <div class="page-header">
+          <h1 data-i18n="page_title_settings">Settings</h1>
+          <p class="page-subtitle" data-i18n="page_subtitle">Developed by ThinkPink Studio</p>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <svg class="settings-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <div>
+              <h2 data-i18n="settings_lang_label">Language</h2>
+              <p data-i18n="settings_lang_desc">Select the app display language</p>
+            </div>
+          </div>
+          <div class="lang-list" id="lang-list"></div>
+        </div>
+      </div>
+
     </main>
   </div>
+  <script src="i18n.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

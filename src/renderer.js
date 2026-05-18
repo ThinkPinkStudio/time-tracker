@@ -1,4 +1,21 @@
-// ─── Navigation ──────────────────────────────────────────────────────────────
+// ─── Language settings ────────────────────────────────────────────────────────
+
+const langList = document.getElementById('lang-list')
+LANGUAGE_OPTIONS.forEach(({ code, label, flag }) => {
+  const btn = document.createElement('button')
+  btn.className = 'lang-option' + (code === getCurrentLang() ? ' active' : '')
+  btn.dataset.lang = code
+  btn.innerHTML = `<span class="lang-flag">${flag}</span><span class="lang-name">${label}</span>`
+  btn.addEventListener('click', () => {
+    setLanguage(code)
+    updateOffset()
+  })
+  langList.appendChild(btn)
+})
+
+applyTranslations()
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
@@ -115,7 +132,7 @@ function updateClock(suffix, timezone) {
   const ss = String(Math.floor(s)).padStart(2,'0')
   document.getElementById(`time-${suffix}`).textContent = `${hh}:${mm}:${ss}`
 
-  const dateFmt = new Intl.DateTimeFormat('it-IT', {
+  const dateFmt = new Intl.DateTimeFormat(getDateLocale(), {
     timeZone: timezone,
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
@@ -134,7 +151,7 @@ function getUTCOffsetHours(timezone) {
 function updateOffset() {
   const diff = getUTCOffsetHours(tzTo.value) - getUTCOffsetHours(tzFrom.value)
   if (diff === 0) {
-    document.getElementById('offset-text').textContent = 'Stesso fuso orario'
+    document.getElementById('offset-text').textContent = t('same_timezone')
     return
   }
   const sign = diff > 0 ? '+' : '-'
