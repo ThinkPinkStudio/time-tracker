@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1e2045"/>
+      <stop offset="100%" stop-color="#0a0a16"/>
+    </radialGradient>
+    <linearGradient id="pinkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f01fa0"/>
+      <stop offset="100%" stop-color="#c0186e"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bb44d4"/>
+      <stop offset="100%" stop-color="#7b1fa2"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="254" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="248" fill="none" stroke="#2a2a5a" stroke-width="1.5"/>
+
+  <!-- Circuit lines with dots (pink side) -->
+  <line x1="256" y1="118" x2="256" y2="72" stroke="#e91e8c" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="256" cy="66" r="7" fill="#e91e8c" filter="url(#glow)"/>
+
+  <line x1="186" y1="148" x2="148" y2="110" stroke="#e91e8c" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="143" cy="105" r="7" fill="#e91e8c" filter="url(#glow)"/>
+
+  <line x1="138" y1="230" x2="92" y2="215" stroke="#e91e8c" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="86" cy="212" r="7" fill="#e91e8c" filter="url(#glow)"/>
+
+  <line x1="155" y1="355" x2="122" y2="388" stroke="#e91e8c" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="117" cy="393" r="7" fill="#e91e8c" filter="url(#glow)"/>
+
+  <!-- Circuit lines with dots (purple side) -->
+  <line x1="326" y1="148" x2="364" y2="110" stroke="#9b27af" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="369" cy="105" r="7" fill="#9b27af" filter="url(#glow)"/>
+
+  <line x1="374" y1="230" x2="420" y2="215" stroke="#9b27af" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="426" cy="212" r="7" fill="#9b27af" filter="url(#glow)"/>
+
+  <line x1="357" y1="355" x2="390" y2="388" stroke="#9b27af" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="395" cy="393" r="7" fill="#9b27af" filter="url(#glow)"/>
+
+  <line x1="256" y1="390" x2="256" y2="436" stroke="#9b27af" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="256" cy="442" r="7" fill="#9b27af" filter="url(#glow)"/>
+
+  <!-- Brain left hemisphere (pink) -->
+  <path d="
+    M 256 128
+    C 232 128, 200 138, 182 158
+    C 162 180, 152 206, 150 230
+    C 148 256, 155 278, 162 292
+    C 172 312, 190 326, 212 332
+    C 228 337, 244 337, 256 337
+    Z
+  " fill="url(#pinkGrad)" opacity="0.92"/>
+
+  <!-- Brain left hemisphere grooves -->
+  <path d="M 195 170 C 184 186, 178 205, 180 224" fill="none" stroke="#0a0a16" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 165 248 C 168 266, 175 282, 186 294" fill="none" stroke="#0a0a16" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 215 200 C 208 218, 206 238, 210 256" fill="none" stroke="#0a0a16" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 225 165 C 220 178, 218 195, 222 210" fill="none" stroke="#0a0a16" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Brain right hemisphere (purple) -->
+  <path d="
+    M 256 128
+    C 280 128, 312 138, 330 158
+    C 350 180, 360 206, 362 230
+    C 364 256, 357 278, 350 292
+    C 340 312, 322 326, 300 332
+    C 284 337, 268 337, 256 337
+    Z
+  " fill="url(#purpleGrad)" opacity="0.92"/>
+
+  <!-- Brain right hemisphere grooves -->
+  <path d="M 317 170 C 328 186, 334 205, 332 224" fill="none" stroke="#0a0a16" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 347 248 C 344 266, 337 282, 326 294" fill="none" stroke="#0a0a16" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 297 200 C 304 218, 306 238, 302 256" fill="none" stroke="#0a0a16" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 287 165 C 292 178, 294 195, 290 210" fill="none" stroke="#0a0a16" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Center dividing line -->
+  <line x1="256" y1="128" x2="256" y2="337" stroke="#0a0a16" stroke-width="5" opacity="0.8"/>
+
+  <!-- Brain stem -->
+  <path d="M 238 337 C 236 356, 240 370, 256 376 C 272 370, 276 356, 274 337 Z" fill="#c0186e" opacity="0.8"/>
+</svg>

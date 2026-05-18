@@ -1,0 +1,7 @@
+node_modules/
+dist/
+assets/logo.png
+assets/logo.ico
+assets/logo.icns
+*.log
+.DS_Store
