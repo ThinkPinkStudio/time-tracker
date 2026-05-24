@@ -1,4 +1,4 @@
-const { app, BrowserWindow, nativeTheme, Menu } = require('electron')
+const { app, BrowserWindow, nativeTheme, Menu, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -65,6 +65,7 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, 'src', 'preload.js'),
     },
   })
 
@@ -73,6 +74,35 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'src', 'index.html'))
   win.once('ready-to-show', () => win.show())
 }
+
+ipcMain.handle('calendar:export-ics', async (event, { defaultName, content }) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    defaultPath: defaultName || 'appointments.ics',
+    filters: [{ name: 'iCalendar', extensions: ['ics'] }],
+  })
+  if (canceled || !filePath) return { ok: false }
+  fs.writeFileSync(filePath, content, 'utf8')
+  return { ok: true, filePath }
+})
+
+ipcMain.handle('calendar:import-ics', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    filters: [{ name: 'iCalendar', extensions: ['ics'] }],
+  })
+  if (canceled || !filePaths.length) return { ok: false }
+  return { ok: true, content: fs.readFileSync(filePaths[0], 'utf8') }
+})
+
+ipcMain.handle('calendar:open-external', async (event, url) => {
+  if (typeof url === 'string' && /^https:\/\/calendar\.google\.com\//.test(url)) {
+    await shell.openExternal(url)
+    return { ok: true }
+  }
+  return { ok: false }
+})
 
 app.whenReady().then(() => {
   createWindow()

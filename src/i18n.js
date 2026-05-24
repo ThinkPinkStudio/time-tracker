@@ -34,6 +34,10 @@ const TRANSLATIONS = {
     appt_empty:             'No appointments yet. Add your first one!',
     appt_in_your_tz:        'In your timezone',
     appt_every:             'Every',
+    appt_import:            'Import .ics',
+    appt_export_all:        'Export all',
+    appt_add_to_google:     'Add to Google Calendar',
+    appt_export_one:        'Export event (.ics)',
   },
   it: {
     nav_converter:          'Convertitore',
@@ -70,6 +74,10 @@ const TRANSLATIONS = {
     appt_empty:             'Nessun appuntamento. Aggiungine uno!',
     appt_in_your_tz:        'Nel tuo fuso',
     appt_every:             'Ogni',
+    appt_import:            'Importa .ics',
+    appt_export_all:        'Esporta tutti',
+    appt_add_to_google:     'Aggiungi a Google Calendar',
+    appt_export_one:        'Esporta evento (.ics)',
   },
   ny: {
     nav_converter:          'Chosintha',
@@ -106,6 +114,10 @@ const TRANSLATIONS = {
     appt_empty:             'Palibe maganizo. Onjezerani!',
     appt_in_your_tz:        'Mu dera lanu la nthawi',
     appt_every:             'Sabata iliyonse',
+    appt_import:            'Lowetsani .ics',
+    appt_export_all:        'Tumizani zonse',
+    appt_add_to_google:     'Onjezani ku Google Calendar',
+    appt_export_one:        'Tumizani chochitika (.ics)',
   },
   lg: {
     nav_converter:          'Kyusa',
@@ -142,6 +154,10 @@ const TRANSLATIONS = {
     appt_empty:             'Tewali nteekateeka. Gattako!',
     appt_in_your_tz:        "Mu kifo kyo ky'essawa",
     appt_every:             'Buli',
+    appt_import:            'Yingiza .ics',
+    appt_export_all:        'Fulumya byonna',
+    appt_add_to_google:     'Yongera ku Google Calendar',
+    appt_export_one:        'Fulumya omukolo (.ics)',
   },
   pl: {
     nav_converter:          'Konwerter',
@@ -178,6 +194,10 @@ const TRANSLATIONS = {
     appt_empty:             'Brak spotkań. Dodaj pierwsze!',
     appt_in_your_tz:        'W Twojej strefie',
     appt_every:             'Każdy',
+    appt_import:            'Importuj .ics',
+    appt_export_all:        'Eksportuj wszystkie',
+    appt_add_to_google:     'Dodaj do Kalendarza Google',
+    appt_export_one:        'Eksportuj wydarzenie (.ics)',
   },
 }
 

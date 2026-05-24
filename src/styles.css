@@ -457,8 +457,36 @@ body {
 /* ─── Appointments Page ───────────────────────── */
 
 .appt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
 }
+
+.appt-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.appt-toolbar-btn:hover {
+  background: rgba(233,30,140,0.08);
+  border-color: var(--pink);
+  color: var(--text-primary);
+}
+
+.appt-toolbar-btn:active { transform: scale(0.97); }
 
 .appt-add-btn {
   display: inline-flex;
@@ -520,7 +548,14 @@ body {
   color: var(--text-primary);
 }
 
-.appt-delete-btn {
+.appt-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.appt-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -535,7 +570,7 @@ body {
   flex-shrink: 0;
 }
 
-.appt-delete-btn:hover {
+.appt-icon-btn:hover {
   background: rgba(233,30,140,0.12);
   color: var(--pink);
 }

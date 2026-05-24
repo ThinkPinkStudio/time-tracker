@@ -259,6 +259,230 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+// ─── Calendar (iCalendar / .ics) interop ──────────────────────────────────────
+
+const BYDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+const BYDAY_TO_DOW = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 }
+
+const pad2 = n => String(n).padStart(2, '0')
+
+// UTC instant → "YYYYMMDDTHHMMSSZ"
+function toIcsUtc(date) {
+  return `${date.getUTCFullYear()}${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}` +
+    `T${pad2(date.getUTCHours())}${pad2(date.getUTCMinutes())}${pad2(date.getUTCSeconds())}Z`
+}
+
+// "YYYY-MM-DD" + "HH:MM" → "YYYYMMDDTHHMM00" (floating, no separators)
+function toIcsLocal(dateStr, timeStr) {
+  return `${dateStr.replace(/-/g, '')}T${timeStr.replace(':', '')}00`
+}
+
+// UTC instant → local wall-clock "YYYYMMDDTHHMMSS" in the given timezone
+function toIcsWallInTz(date, tz) {
+  const parts = {}
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(date).forEach(p => { parts[p.type] = p.value })
+  const hour = parts.hour === '24' ? '00' : parts.hour
+  return `${parts.year}${parts.month}${parts.day}T${hour}${parts.minute}${parts.second}`
+}
+
+function icsEscape(text) {
+  return String(text)
+    .replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+}
+
+function icsUnescape(text) {
+  let out = ''
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\\' && i + 1 < text.length) {
+      const next = text[++i]
+      if (next === 'n' || next === 'N') out += '\n'
+      else out += next
+    } else {
+      out += text[i]
+    }
+  }
+  return out
+}
+
+// Fold lines longer than 75 octets per RFC 5545 (continuation lines start with a space)
+function foldLine(line) {
+  if (line.length <= 73) return line
+  let folded = line.slice(0, 73)
+  let rest = line.slice(73)
+  while (rest.length > 72) {
+    folded += '\r\n ' + rest.slice(0, 72)
+    rest = rest.slice(72)
+  }
+  return folded + '\r\n ' + rest
+}
+
+function buildVEvent(appt) {
+  const tz = appt.organizerTz
+  const startDate = appt.type === 'once' ? appt.date : nextDateForDow(appt.dayOfWeek)
+  const startUTC = apptLocalToUTC(startDate, appt.time, tz)
+  const endUTC = new Date(startUTC.getTime() + 3_600_000)
+
+  const lines = [
+    'BEGIN:VEVENT',
+    `UID:${appt.id}@thinkpinkstudio`,
+    `DTSTAMP:${toIcsUtc(new Date())}`,
+    foldLine(`SUMMARY:${icsEscape(appt.title)}`),
+    `DTSTART;TZID=${tz}:${toIcsLocal(startDate, appt.time)}`,
+    `DTEND;TZID=${tz}:${toIcsWallInTz(endUTC, tz)}`,
+  ]
+  if (appt.type === 'weekly') {
+    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${BYDAY_CODES[appt.dayOfWeek]}`)
+  }
+  lines.push('END:VEVENT')
+  return lines.join('\r\n')
+}
+
+function buildIcs(appts) {
+  const header = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ThinkPink Studio//Timezone Converter//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+  ]
+  return [...header, ...appts.map(buildVEvent), 'END:VCALENDAR'].join('\r\n') + '\r\n'
+}
+
+function parseRrule(value) {
+  const out = {}
+  value.split(';').forEach(part => {
+    const [k, v] = part.split('=')
+    if (k) out[k.toUpperCase()] = v
+  })
+  return out
+}
+
+function bydayToDow(byday) {
+  const code = (byday || '').replace(/[^A-Za-z]/g, '').slice(-2).toUpperCase()
+  return BYDAY_TO_DOW[code]
+}
+
+function eventToAppt(ev) {
+  if (!ev.dtstart) return null
+  const { value, params } = ev.dtstart
+
+  let tzid = null
+  let dateOnly = false
+  params.forEach(p => {
+    const [k, v] = p.split('=')
+    if (!k) return
+    if (k.toUpperCase() === 'TZID') tzid = v
+    if (k.toUpperCase() === 'VALUE' && (v || '').toUpperCase() === 'DATE') dateOnly = true
+  })
+
+  const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?/)
+  if (!m) return null
+  const [, year, month, day, hour, minute, , utcFlag] = m
+
+  const date = `${year}-${month}-${day}`
+  const time = (dateOnly || hour === undefined) ? '00:00' : `${hour}:${minute}`
+
+  let organizerTz
+  if (tzid) organizerTz = tzid
+  else if (utcFlag) organizerTz = 'UTC'
+  else organizerTz = getPreferredTz()
+
+  const rrule = ev.rrule ? parseRrule(ev.rrule) : null
+  const isWeekly = rrule && (rrule.FREQ || '').toUpperCase() === 'WEEKLY'
+
+  const appt = {
+    id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+    title: ev.summary || 'Untitled',
+    time,
+    organizerTz,
+    type: isWeekly ? 'weekly' : 'once',
+  }
+
+  if (isWeekly) {
+    let dow = rrule.BYDAY ? bydayToDow(rrule.BYDAY.split(',')[0]) : undefined
+    if (dow === undefined) dow = new Date(Date.UTC(+year, +month - 1, +day)).getUTCDay()
+    appt.dayOfWeek = dow
+  } else {
+    appt.date = date
+  }
+  return appt
+}
+
+function parseIcs(text) {
+  const unfolded = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '')
+  const events = []
+  let cur = null
+
+  unfolded.split('\n').forEach(line => {
+    if (line === 'BEGIN:VEVENT') { cur = {}; return }
+    if (line === 'END:VEVENT') { if (cur) events.push(cur); cur = null; return }
+    if (!cur) return
+
+    const idx = line.indexOf(':')
+    if (idx < 0) return
+    const [name, ...params] = line.slice(0, idx).split(';')
+    const value = line.slice(idx + 1)
+
+    switch (name.toUpperCase()) {
+      case 'SUMMARY': cur.summary = icsUnescape(value); break
+      case 'DTSTART': cur.dtstart = { value, params }; break
+      case 'RRULE':   cur.rrule = value; break
+    }
+  })
+
+  return events.map(eventToAppt).filter(Boolean)
+}
+
+function googleCalUrl(appt) {
+  const startDate = appt.type === 'once' ? appt.date : nextDateForDow(appt.dayOfWeek)
+  const startUTC = apptLocalToUTC(startDate, appt.time, appt.organizerTz)
+  const endUTC = new Date(startUTC.getTime() + 3_600_000)
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: appt.title,
+    dates: `${toIcsUtc(startUTC)}/${toIcsUtc(endUTC)}`,
+  })
+  if (appt.type === 'weekly') {
+    params.set('recur', `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY_CODES[appt.dayOfWeek]}`)
+  }
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+function sanitizeFileName(title) {
+  return (title.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase().slice(0, 40)) || 'event'
+}
+
+async function exportAllAppointments() {
+  const appts = loadAppointments()
+  if (!appts.length || !window.calendarAPI) return
+  await window.calendarAPI.exportIcs('appointments.ics', buildIcs(appts))
+}
+
+async function exportSingleAppointment(appt) {
+  if (!window.calendarAPI) return
+  await window.calendarAPI.exportIcs(`${sanitizeFileName(appt.title)}.ics`, buildIcs([appt]))
+}
+
+async function importAppointments() {
+  if (!window.calendarAPI) return
+  const res = await window.calendarAPI.importIcs()
+  if (!res || !res.ok) return
+  const parsed = parseIcs(res.content)
+  if (!parsed.length) return
+  const appts = loadAppointments()
+  parsed.forEach(p => appts.push(p))
+  saveAppointments(appts)
+  renderAppointments()
+}
+
+function openInGoogleCalendar(appt) {
+  if (!window.calendarAPI) return
+  window.calendarAPI.openExternal(googleCalUrl(appt))
+}
+
 // ─── Appointments – render ────────────────────────────────────────────────────
 
 function renderAppointments() {
@@ -299,14 +523,33 @@ function renderAppointments() {
     card.innerHTML = `
       <div class="appt-card-header">
         <span class="appt-card-title">${escapeHtml(appt.title)}</span>
-        <button class="appt-delete-btn" data-id="${appt.id}" title="${escapeHtml(t('appt_delete'))}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14H6L5 6"/>
-            <path d="M10 11v6M14 11v6"/>
-            <path d="M9 6V4h6v2"/>
-          </svg>
-        </button>
+        <div class="appt-card-actions">
+          <button class="appt-icon-btn appt-google-btn" title="${escapeHtml(t('appt_add_to_google'))}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="12" y1="13" x2="12" y2="19"/>
+              <line x1="9" y1="16" x2="15" y2="16"/>
+            </svg>
+          </button>
+          <button class="appt-icon-btn appt-export-btn" title="${escapeHtml(t('appt_export_one'))}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button class="appt-icon-btn appt-delete-btn" data-id="${appt.id}" title="${escapeHtml(t('appt_delete'))}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="appt-card-recurrence">${recurrenceLabel}</div>
       <div class="appt-card-times">
@@ -318,6 +561,8 @@ function renderAppointments() {
       </div>
     `
 
+    card.querySelector('.appt-google-btn').addEventListener('click', () => openInGoogleCalendar(appt))
+    card.querySelector('.appt-export-btn').addEventListener('click', () => exportSingleAppointment(appt))
     card.querySelector('.appt-delete-btn').addEventListener('click', () => {
       saveAppointments(loadAppointments().filter(a => a.id !== appt.id))
       renderAppointments()
@@ -400,6 +645,11 @@ function openModal() {
 function closeModal() {
   modal.classList.remove('open')
 }
+
+const importBtn = document.getElementById('appt-import-btn')
+const exportBtn = document.getElementById('appt-export-btn')
+if (importBtn) importBtn.addEventListener('click', importAppointments)
+if (exportBtn) exportBtn.addEventListener('click', exportAllAppointments)
 
 addBtn.addEventListener('click', openModal)
 closeBtn.addEventListener('click', closeModal)
